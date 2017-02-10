@@ -1,7 +1,5 @@
-EN_WHITELIST = '0123456789abcdefghijklmnopqrstuvwxyz ' # space is included in whitelist
+EN_WHITELIST = '0123456789abcdefghijklmnopqrstuvwxyz !.,' # space and punctuation marks are included in whitelist
 EN_BLACKLIST = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~\''
-
-FILENAME = 'data/chat.txt'
 
 limit = {
         'maxq' : 20,
@@ -17,10 +15,14 @@ import random
 import sys
 
 import nltk
+from nltk.tokenize import TweetTokenizer
+tknzr = TweetTokenizer()
+
 import itertools
 from collections import defaultdict
 
 import numpy as np
+import pandas as pd
 
 import pickle
 
@@ -34,9 +36,26 @@ def ddefault():
 
 '''
 def read_lines(filename):
-    return open(filename).read().split('\n')[:-1]
+    f = pd.read_csv('./raw_data/Tweets_processed_%s.txt' % filename,
+                     sep="\t",
+                     skiprows=[0],
+                     error_bad_lines=False,
+                     names=["index", "tweet_id", "text", "user_id"],
+                     dtype={"text": str, "user_id": str, "tweet_id": str})
 
-
+    count = 0
+    q_lines = []
+    a_lines = []
+    previous = None
+    for i, row in f.iterrows():
+        if previous != None:
+            if previous[0] == row['index'] - 1:
+                q_lines.append(previous[1])
+                a_lines.append(row['text'])
+                count += 1
+        previous = (row['index'], row['text'])
+    print "%s Q&A pairs added" % count
+    return q_lines, a_lines
 '''
  split sentences in one line
   into multiple lines
@@ -79,16 +98,17 @@ def index_(tokenized_sentences, vocab_size):
     return tuple( filtered_ta, filtered_en )
 
 '''
-def filter_data(sequences):
+def filter_data(q, a):
     filtered_q, filtered_a = [], []
-    raw_data_len = len(sequences)//2
+    raw_data_len = len(q)
 
-    for i in range(0, len(sequences), 2):
-        qlen, alen = len(sequences[i].split(' ')), len(sequences[i+1].split(' '))
+    for i in range(len(q)):
+        qlen = len(q[i])
+        alen = len(a[i])
         if qlen >= limit['minq'] and qlen <= limit['maxq']:
             if alen >= limit['mina'] and alen <= limit['maxa']:
-                filtered_q.append(sequences[i])
-                filtered_a.append(sequences[i+1])
+                filtered_q.append(q[i])
+                filtered_a.append(a[i])
 
     # print the fraction of the original data, filtered
     filt_data_len = len(filtered_q)
@@ -102,18 +122,18 @@ def filter_data(sequences):
 
 
 '''
- create the final dataset : 
+ create the final dataset :
   - convert list of items to arrays of indices
   - add zero padding
       return ( [array_en([indices]), array_ta([indices]) )
- 
+
 '''
 def zero_pad(qtokenized, atokenized, w2idx):
     # num of rows
     data_len = len(qtokenized)
 
     # numpy arrays to store indices
-    idx_q = np.zeros([data_len, limit['maxq']], dtype=np.int32) 
+    idx_q = np.zeros([data_len, limit['maxq']], dtype=np.int32)
     idx_a = np.zeros([data_len, limit['maxa']], dtype=np.int32)
 
     for i in range(data_len):
@@ -147,34 +167,32 @@ def pad_seq(seq, lookup, maxlen):
 def process_data():
 
     print('\n>> Read lines from file')
-    lines = read_lines(filename=FILENAME)
-
-    # change to lower case (just for en)
-    lines = [ line.lower() for line in lines ]
-
-    print('\n:: Sample from read(p) lines')
-    print(lines[121:125])
+    q_lines, a_lines = read_lines("Test")
 
     # filter out unnecessary characters
     print('\n>> Filter lines')
-    lines = [ filter_line(line, EN_WHITELIST) for line in lines ]
-    print(lines[121:125])
+    q_lines = [ filter_line(line, EN_WHITELIST) for line in q_lines ]
+    a_lines = [ filter_line(line, EN_WHITELIST) for line in a_lines ]
+
+    print(q_lines[200:202])
+    print(a_lines[200:202])
 
     # filter out too long or too short sequences
     print('\n>> 2nd layer of filtering')
-    qlines, alines = filter_data(lines)
-    print('\nq : {0} ; a : {1}'.format(qlines[60], alines[60]))
-    print('\nq : {0} ; a : {1}'.format(qlines[61], alines[61]))
-
+    q_lines, a_lines = filter_data(q_lines, a_lines)
 
     # convert list of [lines of text] into list of [list of words ]
     print('\n>> Segment lines into words')
-    qtokenized = [ wordlist.split(' ') for wordlist in qlines ]
-    atokenized = [ wordlist.split(' ') for wordlist in alines ]
-    print('\n:: Sample from segmented list of words')
-    print('\nq : {0} ; a : {1}'.format(qtokenized[60], atokenized[60]))
-    print('\nq : {0} ; a : {1}'.format(qtokenized[61], atokenized[61]))
+    qtokenized = map(lambda x: tknzr.tokenize(x),  q_lines)
+    atokenized = map(lambda x: tknzr.tokenize(x),  a_lines)
 
+
+    print('\n:: Sample from segmented list of words')
+    print('\nq : {0} ; a : {1}'.format(q_lines[100], a_lines[101]))
+    print('\nq : {0} ; a : {1}'.format(q_lines[200], a_lines[201]))
+
+    print('\nq : {0} ; a : {1}'.format(qtokenized[100], atokenized[101]))
+    print('\nq : {0} ; a : {1}'.format(qtokenized[200], atokenized[201]))
 
     # indexing -> idx2w, w2idx : en/ta
     print('\n >> Index words')
