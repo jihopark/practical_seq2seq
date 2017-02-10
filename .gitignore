@@ -7,3 +7,5 @@ ckpt/*/*.*
 ignore/
 *.pkl
 *.tar.gz
+datasets/*/raw_data
+
