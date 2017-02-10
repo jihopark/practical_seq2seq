@@ -50,8 +50,8 @@ def read_lines(filename):
     for i, row in f.iterrows():
         if previous != None:
             if previous[0] == row['index'] - 1:
-                q_lines.append(previous[1])
-                a_lines.append(row['text'])
+                q_lines.append(str(previous[1]))
+                a_lines.append(str(row['text']))
                 count += 1
         previous = (row['index'], row['text'])
     print "%s Q&A pairs added" % count
@@ -164,10 +164,10 @@ def pad_seq(seq, lookup, maxlen):
     return indices + [0]*(maxlen - len(seq))
 
 
-def process_data():
+def process_data(name):
 
     print('\n>> Read lines from file')
-    q_lines, a_lines = read_lines("Test")
+    q_lines, a_lines = read_lines(name)
 
     # filter out unnecessary characters
     print('\n>> Filter lines')
@@ -203,8 +203,8 @@ def process_data():
 
     print('\n >> Save numpy arrays to disk')
     # save them
-    np.save('idx_q.npy', idx_q)
-    np.save('idx_a.npy', idx_a)
+    np.save('idx_q_%s.npy' % name, idx_q)
+    np.save('idx_a_%s.npy' % name, idx_a)
 
     # let us now save the necessary dictionaries
     metadata = {
@@ -215,18 +215,20 @@ def process_data():
                 }
 
     # write to disk : data control dictionaries
-    with open('metadata.pkl', 'wb') as f:
+    with open('metadata_%s.pkl' % name, 'wb') as f:
         pickle.dump(metadata, f)
 
-def load_data(PATH=''):
+def load_data(PATH='', name):
     # read data control dictionaries
-    with open(PATH + 'metadata.pkl', 'rb') as f:
+    with open(PATH + 'metadata_%s.pkl' % name, 'rb') as f:
         metadata = pickle.load(f)
     # read numpy arrays
-    idx_q = np.load(PATH + 'idx_q.npy')
-    idx_a = np.load(PATH + 'idx_a.npy')
+    idx_q = np.load(PATH + 'idx_q_%s.npy' % name)
+    idx_a = np.load(PATH + 'idx_a_%s.npy' % name)
     return metadata, idx_q, idx_a
 
 
 if __name__ == '__main__':
-    process_data()
+    process_data("Test")
+    process_data("Valid")
+    process_data("Train")
