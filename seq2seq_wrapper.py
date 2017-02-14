@@ -5,18 +5,22 @@ import sys
 
 class Seq2Seq(object):
 
-    def __init__(self, xseq_len, yseq_len, 
+    def __init__(self, xseq_len, yseq_len,
             xvocab_size, yvocab_size,
             emb_dim, num_layers, ckpt_path,
-            lr=0.0001, 
-            epochs=100000, model_name='seq2seq_model'):
+            lr=0.0001,
+            epochs=100000, model_name='seq2seq_model',
+            evaluate_every=100,
+            checkpoint_every=100):
 
         # attach these arguments to self
         self.xseq_len = xseq_len
         self.yseq_len = yseq_len
         self.ckpt_path = ckpt_path
         self.epochs = epochs
+        self.evaluate_every = evaluate_every
         self.model_name = model_name
+        self.checkpoint_every = checkpoint_every
 
 
         # build thy graph
@@ -26,13 +30,13 @@ class Seq2Seq(object):
             # placeholders
             tf.reset_default_graph()
             #  encoder inputs : list of indices of length xseq_len
-            self.enc_ip = [ tf.placeholder(shape=[None,], 
-                            dtype=tf.int64, 
+            self.enc_ip = [ tf.placeholder(shape=[None,],
+                            dtype=tf.int64,
                             name='ei_{}'.format(t)) for t in range(xseq_len) ]
 
             #  labels that represent the real outputs
-            self.labels = [ tf.placeholder(shape=[None,], 
-                            dtype=tf.int64, 
+            self.labels = [ tf.placeholder(shape=[None,],
+                            dtype=tf.int64,
                             name='ei_{}'.format(t)) for t in range(yseq_len) ]
 
             #  decoder inputs : 'GO' + [ y1, y2, ... y_t-1 ]
@@ -52,13 +56,13 @@ class Seq2Seq(object):
             # for parameter sharing between training model
             #  and testing model
             with tf.variable_scope('decoder') as scope:
-                # build the seq2seq model 
+                # build the seq2seq model
                 #  inputs : encoder, decoder inputs, LSTM cell type, vocabulary sizes, embedding dimensions
                 self.decode_outputs, self.decode_states = tf.nn.seq2seq.embedding_rnn_seq2seq(self.enc_ip,self.dec_ip, stacked_lstm,
                                                     xvocab_size, yvocab_size, emb_dim)
                 # share parameters
                 scope.reuse_variables()
-                # testing model, where output of previous timestep is fed as input 
+                # testing model, where output of previous timestep is fed as input
                 #  to the next timestep
                 self.decode_outputs_test, self.decode_states_test = tf.nn.seq2seq.embedding_rnn_seq2seq(
                     self.enc_ip, self.dec_ip, stacked_lstm, xvocab_size, yvocab_size,emb_dim,
@@ -108,7 +112,7 @@ class Seq2Seq(object):
         # build feed
         feed_dict = self.get_feed(batchX, batchY, keep_prob=1.)
         loss_v, dec_op_v = sess.run([self.loss, self.decode_outputs_test], feed_dict)
-        # dec_op_v is a list; also need to transpose 0,1 indices 
+        # dec_op_v is a list; also need to transpose 0,1 indices
         #  (interchange batch_size and timesteps dimensions
         dec_op_v = np.array(dec_op_v).transpose([1,0,2])
         return loss_v, dec_op_v, batchX, batchY
@@ -126,7 +130,7 @@ class Seq2Seq(object):
     #   evaluates on valid set periodically
     #    prints statistics
     def train(self, train_set, valid_set, sess=None ):
-        
+
         # we need to save the model periodically
         saver = tf.train.Saver()
 
@@ -142,13 +146,15 @@ class Seq2Seq(object):
         for i in range(self.epochs):
             try:
                 self.train_batch(sess, train_set)
-                if i and i% (self.epochs//100) == 0: # TODO : make this tunable by the user
+                if i and i % self.checkpoint_every == 0:
                     # save model to disk
                     saver.save(sess, self.ckpt_path + self.model_name + '.ckpt', global_step=i)
-                    # evaluate to get validation loss
-                    val_loss = self.eval_batches(sess, valid_set, 16) # TODO : and this
-                    # print stats
                     print('\nModel saved to disk at iteration #{}'.format(i))
+
+                if i and i % self.evaluate_every == 0:
+                    # evaluate to get validation loss
+                    val_loss = self.eval_batches(sess, valid_set, 16)
+                    # print stats
                     print('val   loss : {0:.6f}'.format(val_loss))
                     sys.stdout.flush()
             except KeyboardInterrupt: # this will most definitely happen, so handle it
@@ -173,10 +179,8 @@ class Seq2Seq(object):
         feed_dict = {self.enc_ip[t]: X[t] for t in range(self.xseq_len)}
         feed_dict[self.keep_prob] = 1.
         dec_op_v = sess.run(self.decode_outputs_test, feed_dict)
-        # dec_op_v is a list; also need to transpose 0,1 indices 
+        # dec_op_v is a list; also need to transpose 0,1 indices
         #  (interchange batch_size and timesteps dimensions
         dec_op_v = np.array(dec_op_v).transpose([1,0,2])
         # return the index of item with highest probability
         return np.argmax(dec_op_v, axis=2)
-
-
