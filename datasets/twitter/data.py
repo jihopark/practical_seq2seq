@@ -35,25 +35,40 @@ def ddefault():
      return [list of lines]
 
 '''
-def read_lines(filename):
-    f = pd.read_csv('./raw_data/Tweets_processed_%s.txt' % filename,
-                     sep="\t",
-                     skiprows=[0],
-                     error_bad_lines=False,
-                     names=["index", "tweet_id", "text", "user_id"],
-                     dtype={"text": str, "user_id": str, "tweet_id": str})
+def read_lines(filenames):
+    data_files = []
+    for filename in filenames:
+        print "Reading Tweets_processed_%s.txt" % filename
+        f = pd.read_csv('./raw_data/Tweets_processed_%s.txt' % filename,
+                         sep="\t",
+                         skiprows=[0],
+                         error_bad_lines=False,
+                         names=["index", "tweet_id", "text", "user_id"],
+                         dtype={"text": str, "user_id": str, "tweet_id": str, "index": str})
+        data_files.append(f)
+
+
+    data_files = pd.concat(data_files)
+    print "Appending all the files"
 
     count = 0
     q_lines = []
     a_lines = []
     previous = None
-    for i, row in f.iterrows():
-        if previous != None:
-            if previous[0] == row['index'] - 1:
-                q_lines.append(str(previous[1]))
-                a_lines.append(str(row['text']))
-                count += 1
-        previous = (row['index'], row['text'])
+    for i, row in data_files.iterrows():
+        try:
+            index = int(row['index'])
+        except ValueError:
+            print "ValueError %s" % row['index']
+            index = ""
+        if index:
+            if previous != None:
+                if previous[0] == index - 1:
+                    q_lines.append(str(previous[1]))
+                    a_lines.append(str(row['text']))
+                    count += 1
+            previous = (index, row['text'])
+
     print "%s Q&A pairs added" % count
     return q_lines, a_lines
 '''
@@ -164,10 +179,10 @@ def pad_seq(seq, lookup, maxlen):
     return indices + [0]*(maxlen - len(seq))
 
 
-def process_data(name):
+def process_data():
 
     print('\n>> Read lines from file')
-    q_lines, a_lines = read_lines(name)
+    q_lines, a_lines = read_lines(["Test", "Train", "Valid"])
 
     # filter out unnecessary characters
     print('\n>> Filter lines')
@@ -203,8 +218,8 @@ def process_data(name):
 
     print('\n >> Save numpy arrays to disk')
     # save them
-    np.save('idx_q_%s.npy' % name, idx_q)
-    np.save('idx_a_%s.npy' % name, idx_a)
+    np.save('idx_q.npy', idx_q)
+    np.save('idx_a.npy', idx_a)
 
     # let us now save the necessary dictionaries
     metadata = {
@@ -215,20 +230,18 @@ def process_data(name):
                 }
 
     # write to disk : data control dictionaries
-    with open('metadata_%s.pkl' % name, 'wb') as f:
+    with open('metadata.pkl', 'wb') as f:
         pickle.dump(metadata, f)
 
-def load_data(PATH='', name):
+def load_data(PATH=''):
     # read data control dictionaries
-    with open(PATH + 'metadata_%s.pkl' % name, 'rb') as f:
+    with open(PATH + 'metadata.pkl', 'rb') as f:
         metadata = pickle.load(f)
     # read numpy arrays
-    idx_q = np.load(PATH + 'idx_q_%s.npy' % name)
-    idx_a = np.load(PATH + 'idx_a_%s.npy' % name)
+    idx_q = np.load(PATH + 'idx_q.npy')
+    idx_a = np.load(PATH + 'idx_a.npy')
     return metadata, idx_q, idx_a
 
 
 if __name__ == '__main__':
-    process_data("Test")
-    process_data("Valid")
-    process_data("Train")
+    process_data()
