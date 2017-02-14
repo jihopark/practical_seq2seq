@@ -38,7 +38,7 @@ def ddefault():
 def read_lines(filenames):
     data_files = []
     for filename in filenames:
-        print "Reading Tweets_processed_%s.txt" % filename
+        print("Reading Tweets_processed_%s.txt" % filename)
         f = pd.read_csv('./raw_data/Tweets_processed_%s.txt' % filename,
                          sep="\t",
                          skiprows=[0],
@@ -49,7 +49,7 @@ def read_lines(filenames):
 
 
     data_files = pd.concat(data_files)
-    print "Appending all the files"
+    print("Appending all the files")
 
     count = 0
     q_lines = []
@@ -59,7 +59,7 @@ def read_lines(filenames):
         try:
             index = int(row['index'])
         except ValueError:
-            print "ValueError %s" % row['index']
+            print("ValueError %s" % row['index'])
             index = ""
         if index:
             if previous != None:
@@ -69,7 +69,7 @@ def read_lines(filenames):
                     count += 1
             previous = (index, row['text'])
 
-    print "%s Q&A pairs added" % count
+    print("%s Q&A pairs added" % count)
     return q_lines, a_lines
 '''
  split sentences in one line
