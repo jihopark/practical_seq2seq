@@ -11,21 +11,30 @@ import data_utils
 # ==================================================
 
 # Model Hyperparameters
-tf.flags.DEFINE_integer("embedding_dim", 1024, "Dimensionality of character embedding (default: 1024)")
-tf.flags.DEFINE_integer("num_layers", 3, "Number of seq2seq layer (default: 3)")
+tf.flags.DEFINE_integer("emb_dim", 1000, "Dimensionality of character embedding (default: 1000)")
+tf.flags.DEFINE_integer("num_layers", 4, "Number of seq2seq layer (default: 4)")
 
 # Training parameters
-tf.flags.DEFINE_integer("batch_size", 32, "Batch Size (default: 32)")
-tf.flags.DEFINE_integer("num_epochs", 10000, "Number of training epochs (default: 10000)")
-tf.flags.DEFINE_integer("evaluate_every", 100, "Evaluate model on dev set after this many epochs (default: 100)")
-tf.flags.DEFINE_integer("checkpoint_every", 100, "Save model after this many steps (default: 100)")
+tf.flags.DEFINE_integer("batch_size", 128, "Batch Size (default: 128)")
+tf.flags.DEFINE_integer("num_epochs", 100000, "Number of training epochs (default: 100000)")
+tf.flags.DEFINE_integer("evaluate_every", 500, "Evaluate model on dev set after this many epochs (default: 500)")
+tf.flags.DEFINE_integer("checkpoint_every", 1000, "Save model after this many steps (default: 1000)")
+
+
+# Misc Parameters
+tf.flags.DEFINE_integer("memory_usage_percentage", 100, "Set Memory usage percentage (default:100)")
 
 FLAGS = tf.flags.FLAGS
 FLAGS._parse_flags()
 
+tf.logging.set_verbosity(tf.logging.INFO)
+
 
 # load data from pickle and npy files
+print("loading data")
 metadata, idx_q, idx_a = data.load_data(PATH='datasets/twitter/')
+
+print("done loading. (Q: %s/A: %s) now splitting into train/valid/test" % (idx_q.shape, idx_a.shape))
 (trainX, trainY), (testX, testY), (validX, validY) = data_utils.split_dataset(idx_q, idx_a)
 
 # parameters
@@ -34,9 +43,18 @@ yseq_len = trainY.shape[-1]
 batch_size = FLAGS.batch_size
 xvocab_size = len(metadata['idx2w'])
 yvocab_size = xvocab_size
-emb_dim = FLAGS.num_epochs
+emb_dim = FLAGS.emb_dim
 
 import seq2seq_wrapper
+
+print("Initialzing model with:")
+print("xseq_len=%s, yseq_len=%s" % (xseq_len, yseq_len))
+print("xvocab_size=%s, yvocab_size=%s" % (xvocab_size, yvocab_size))
+print("emb_dim=%s" % emb_dim)
+
+print("Training with:")
+print("training set size=%s" % trainX.shape[0])
+print("validiation set size=%s" % validX.shape[0])
 
 model = seq2seq_wrapper.Seq2Seq(xseq_len=xseq_len,
                                yseq_len=yseq_len,
@@ -47,7 +65,8 @@ model = seq2seq_wrapper.Seq2Seq(xseq_len=xseq_len,
                                num_layers=FLAGS.num_layers,
                                epochs=FLAGS.num_epochs,
                                evaluate_every=FLAGS.evaluate_every,
-                               checkpoint_every=FLAGS.checkpoint_every
+                               checkpoint_every=FLAGS.checkpoint_every,
+                               memory_usage_percentage=FLAGS.memory_usage_percentage
                                )
 
 val_batch_gen = data_utils.rand_batch_gen(validX, validY, batch_size)
@@ -55,5 +74,5 @@ train_batch_gen = data_utils.rand_batch_gen(trainX, trainY, batch_size)
 
 
 # In[9]:
-sess = model.restore_last_session()
+# sess = model.restore_last_session()
 sess = model.train(train_batch_gen, val_batch_gen)

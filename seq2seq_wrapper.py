@@ -8,10 +8,11 @@ class Seq2Seq(object):
     def __init__(self, xseq_len, yseq_len,
             xvocab_size, yvocab_size,
             emb_dim, num_layers, ckpt_path,
-            lr=0.0001,
+            lr=1,
             epochs=100000, model_name='seq2seq_model',
             evaluate_every=100,
-            checkpoint_every=100):
+            checkpoint_every=100,
+            memory_usage_percentage=100):
 
         # attach these arguments to self
         self.xseq_len = xseq_len
@@ -21,7 +22,7 @@ class Seq2Seq(object):
         self.evaluate_every = evaluate_every
         self.model_name = model_name
         self.checkpoint_every = checkpoint_every
-
+        self.memory_usage_percentage = memory_usage_percentage
 
         # build thy graph
         #  attach any part of the graph that needs to be exposed, to the self
@@ -136,8 +137,10 @@ class Seq2Seq(object):
 
         # if no session is given
         if not sess:
-            # create a session
-            sess = tf.Session()
+            gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=self.memory_usage_percentage/100)
+            session_conf = tf.ConfigProto(allow_soft_placement=True,
+                                          gpu_options=gpu_options)
+            sess = tf.Session(config=session_conf)
             # init all variables
             sess.run(tf.global_variables_initializer())
 
