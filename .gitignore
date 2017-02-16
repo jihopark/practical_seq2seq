@@ -9,3 +9,4 @@ ignore/
 *.tar.gz
 datasets/*/raw_data
 *.pyc
+*.out
