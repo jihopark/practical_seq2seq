@@ -2,9 +2,9 @@ EN_WHITELIST = '0123456789abcdefghijklmnopqrstuvwxyz !.,' # space and punctuatio
 EN_BLACKLIST = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~\''
 
 limit = {
-        'maxq' : 20,
-        'minq' : 0,
-        'maxa' : 20,
+        'maxq' : 30,
+        'minq' : 3,
+        'maxa' : 30,
         'mina' : 3
         }
 
@@ -116,7 +116,6 @@ def index_(tokenized_sentences, vocab_size):
 def filter_data(q, a):
     filtered_q, filtered_a = [], []
     raw_data_len = len(q)
-
     for i in range(len(q)):
         qlen = len(q[i])
         alen = len(a[i])
@@ -154,9 +153,6 @@ def zero_pad(qtokenized, atokenized, w2idx):
     for i in range(data_len):
         q_indices = pad_seq(qtokenized[i], w2idx, limit['maxq'])
         a_indices = pad_seq(atokenized[i], w2idx, limit['maxa'])
-
-        #print(len(idx_q[i]), len(q_indices))
-        #print(len(idx_a[i]), len(a_indices))
         idx_q[i] = np.array(q_indices)
         idx_a[i] = np.array(a_indices)
 
@@ -192,19 +188,16 @@ def process_data():
     print(q_lines[200:202])
     print(a_lines[200:202])
 
+
     # filter out too long or too short sequences
     print('\n>> 2nd layer of filtering')
-    q_lines, a_lines = filter_data(q_lines, a_lines)
 
     # convert list of [lines of text] into list of [list of words ]
     print('\n>> Segment lines into words')
-    qtokenized = map(lambda x: tknzr.tokenize(x),  q_lines)
-    atokenized = map(lambda x: tknzr.tokenize(x),  a_lines)
+    qtokenized = list(map(lambda x: tknzr.tokenize(x),  q_lines))
+    atokenized = list(map(lambda x: tknzr.tokenize(x),  a_lines))
 
-
-    print('\n:: Sample from segmented list of words')
-    print('\nq : {0} ; a : {1}'.format(q_lines[100], a_lines[101]))
-    print('\nq : {0} ; a : {1}'.format(q_lines[200], a_lines[201]))
+    qtokenized, atokenized = filter_data(qtokenized, atokenized)
 
     print('\nq : {0} ; a : {1}'.format(qtokenized[100], atokenized[101]))
     print('\nq : {0} ; a : {1}'.format(qtokenized[200], atokenized[201]))
@@ -216,6 +209,7 @@ def process_data():
     print('\n >> Zero Padding')
     idx_q, idx_a = zero_pad(qtokenized, atokenized, w2idx)
 
+    print("number of lines:%s" % len(idx_q))
     print('\n >> Save numpy arrays to disk')
     # save them
     np.save('idx_q.npy', idx_q)
