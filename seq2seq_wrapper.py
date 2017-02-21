@@ -56,6 +56,7 @@ class Seq2Seq(object):
 
             # for parameter sharing between training model
             #  and testing model
+            # TODO: reverse the enc_ip
             with tf.variable_scope('decoder') as scope:
                 # build the seq2seq model
                 #  inputs : encoder, decoder inputs, LSTM cell type, vocabulary sizes, embedding dimensions
@@ -73,10 +74,11 @@ class Seq2Seq(object):
             #  build loss function
 
             # weighted loss
-            #  TODO : add parameter hint
+            #  TODO : adjust weights
             loss_weights = [ tf.ones_like(label, dtype=tf.float32) for label in self.labels ]
             self.loss = tf.nn.seq2seq.sequence_loss(self.decode_outputs, self.labels, loss_weights, yvocab_size)
             # train op to minimize the loss
+            # TODO: learning rate change?
             self.train_op = tf.train.AdamOptimizer(learning_rate=lr).minimize(self.loss)
 
         sys.stdout.write('<log> Building Graph ')
@@ -124,6 +126,7 @@ class Seq2Seq(object):
         for i in range(num_batches):
             loss_v, dec_op_v, batchX, batchY = self.eval_step(sess, eval_batch_gen)
             losses.append(loss_v)
+            # TODO: show some samples from evaluation
         return np.mean(losses)
 
     # finally the train function that
@@ -136,6 +139,7 @@ class Seq2Seq(object):
         saver = tf.train.Saver()
 
         # if no session is given
+        # TODO: move outside of wrapper
         if not sess:
             gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=self.memory_usage_percentage/100)
             session_conf = tf.ConfigProto(allow_soft_placement=True,
@@ -150,6 +154,7 @@ class Seq2Seq(object):
             try:
                 self.train_batch(sess, train_set)
                 if i and i % self.checkpoint_every == 0:
+                    # TODO: change checkpoint every run
                     # save model to disk
                     saver.save(sess, self.ckpt_path + self.model_name + '.ckpt', global_step=i)
                     print('\nModel saved to disk at iteration #{}'.format(i))
@@ -158,6 +163,7 @@ class Seq2Seq(object):
                     # evaluate to get validation loss
                     val_loss = self.eval_batches(sess, valid_set, 16)
                     # print stats
+                    # TODO: change to perplexity
                     print('val   loss : {0:.6f}'.format(val_loss))
                     sys.stdout.flush()
             except KeyboardInterrupt: # this will most definitely happen, so handle it
@@ -178,6 +184,7 @@ class Seq2Seq(object):
         return sess
 
     # prediction
+    # TODO: rescoring
     def predict(self, sess, X):
         feed_dict = {self.enc_ip[t]: X[t] for t in range(self.xseq_len)}
         feed_dict[self.keep_prob] = 1.
