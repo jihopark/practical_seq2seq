@@ -162,8 +162,7 @@ class Seq2Seq(object):
                     # evaluate to get validation loss
                     val_loss = self.eval_batches(sess, valid_set, 16)
                     # print stats
-                    # TODO: change to perplexity
-                    print('val   loss : {0:.6f}'.format(val_loss))
+                    print('val loss: {0:.6f}  perplexity: {0:.2f}'.format(val_loss, 2**val_loss ))
                     sys.stdout.flush()
             except KeyboardInterrupt: # this will most definitely happen, so handle it
                 print('Interrupted by user at iteration {}'.format(i))
