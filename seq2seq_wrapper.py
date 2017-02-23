@@ -7,22 +7,14 @@ class Seq2Seq(object):
 
     def __init__(self, xseq_len, yseq_len,
             xvocab_size, yvocab_size,
-            emb_dim, num_layers, ckpt_path,
+            emb_dim, num_layers,
             lr=1,
-            epochs=100000, model_name='seq2seq_model',
-            evaluate_every=100,
-            checkpoint_every=100,
-            memory_usage_percentage=100):
+            model_name='seq2seq_model'):
 
         # attach these arguments to self
         self.xseq_len = xseq_len
         self.yseq_len = yseq_len
-        self.ckpt_path = ckpt_path
-        self.epochs = epochs
-        self.evaluate_every = evaluate_every
         self.model_name = model_name
-        self.checkpoint_every = checkpoint_every
-        self.memory_usage_percentage = memory_usage_percentage
 
         # build thy graph
         #  attach any part of the graph that needs to be exposed, to the self
@@ -83,114 +75,4 @@ class Seq2Seq(object):
         sys.stdout.write('<log> Building Graph ')
         # build comput graph
         __graph__()
-        sys.stdout.write('</log>')
-
-
-
-    '''
-        Training and Evaluation
-
-    '''
-
-    # get the feed dictionary
-    def get_feed(self, X, Y, keep_prob):
-
-        # reverse encoder input
-        feed_dict = {self.enc_ip[t]: X[self.xseq_len - t - 1] for t in range(self.xseq_len)}
-
-        feed_dict.update({self.labels[t]: Y[t] for t in range(self.yseq_len)})
-        feed_dict[self.keep_prob] = keep_prob # dropout prob
-        return feed_dict
-
-    # run one batch for training
-    def train_batch(self, sess, train_batch_gen):
-        # get batches
-        batchX, batchY = train_batch_gen.__next__()
-        # build feed
-        feed_dict = self.get_feed(batchX, batchY, keep_prob=0.5)
-        _, loss_v = sess.run([self.train_op, self.loss], feed_dict)
-        return loss_v
-
-    def eval_step(self, sess, eval_batch_gen):
-        # get batches
-        batchX, batchY = eval_batch_gen.__next__()
-        # build feed
-        feed_dict = self.get_feed(batchX, batchY, keep_prob=1.)
-        loss_v, dec_op_v = sess.run([self.loss, self.decode_outputs_test], feed_dict)
-        # dec_op_v is a list; also need to transpose 0,1 indices
-        #  (interchange batch_size and timesteps dimensions
-        dec_op_v = np.array(dec_op_v).transpose([1,0,2])
-        return loss_v, dec_op_v, batchX, batchY
-
-    # evaluate 'num_batches' batches
-    def eval_batches(self, sess, eval_batch_gen, num_batches):
-        losses = []
-        for i in range(num_batches):
-            loss_v, dec_op_v, batchX, batchY = self.eval_step(sess, eval_batch_gen)
-            losses.append(loss_v)
-            # TODO: show some samples from evaluation
-        return np.mean(losses)
-
-    # finally the train function that
-    #  runs the train_op in a session
-    #   evaluates on valid set periodically
-    #    prints statistics
-    def train(self, train_set, valid_set, sess=None ):
-
-        # we need to save the model periodically
-        saver = tf.train.Saver()
-
-        # if no session is given
-        # TODO: move outside of wrapper
-        if not sess:
-            gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=self.memory_usage_percentage/100)
-            session_conf = tf.ConfigProto(allow_soft_placement=True,
-                                          gpu_options=gpu_options)
-            sess = tf.Session(config=session_conf)
-            # init all variables
-            sess.run(tf.global_variables_initializer())
-
-        sys.stdout.write('\n<log> Training started </log>\n')
-        # run M epochs
-        for i in range(self.epochs):
-            try:
-                self.train_batch(sess, train_set)
-                if i and i % self.checkpoint_every == 0:
-                    # save model to disk
-                    saver.save(sess, self.ckpt_path + self.model_name + '.ckpt', global_step=i)
-                    print('\nModel saved to disk at iteration #{}'.format(i))
-
-                if i and i % self.evaluate_every == 0:
-                    # evaluate to get validation loss
-                    val_loss = self.eval_batches(sess, valid_set, 16)
-                    # print stats
-                    print('val loss: {0:.6f}  perplexity: {0:.2f}'.format(val_loss, 2**val_loss ))
-                    sys.stdout.flush()
-            except KeyboardInterrupt: # this will most definitely happen, so handle it
-                print('Interrupted by user at iteration {}'.format(i))
-                self.session = sess
-                return sess
-
-    def restore_last_session(self):
-        saver = tf.train.Saver()
-        # create a session
-        sess = tf.Session()
-        # get checkpoint state
-        ckpt = tf.train.get_checkpoint_state(self.ckpt_path)
-        # restore session
-        if ckpt and ckpt.model_checkpoint_path:
-            saver.restore(sess, ckpt.model_checkpoint_path)
-        # return to user
-        return sess
-
-    # prediction
-    # TODO: rescoring
-    def predict(self, sess, X):
-        feed_dict = {self.enc_ip[t]: X[t] for t in range(self.xseq_len)}
-        feed_dict[self.keep_prob] = 1.
-        dec_op_v = sess.run(self.decode_outputs_test, feed_dict)
-        # dec_op_v is a list; also need to transpose 0,1 indices
-        #  (interchange batch_size and timesteps dimensions
-        dec_op_v = np.array(dec_op_v).transpose([1,0,2])
-        # return the index of item with highest probability
-        return np.argmax(dec_op_v, axis=2)
+        sys.stdout.write('</log>')  

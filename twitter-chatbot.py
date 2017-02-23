@@ -7,6 +7,8 @@ import time
 from datasets.twitter import data
 import data_utils
 
+#training & prediction
+from train import train_seq2seq
 
 # Parameters
 # ==================================================
@@ -65,19 +67,29 @@ model = seq2seq_wrapper.Seq2Seq(xseq_len=xseq_len,
                                yseq_len=yseq_len,
                                xvocab_size=xvocab_size,
                                yvocab_size=yvocab_size,
-                               ckpt_path=out_dir,
                                emb_dim=emb_dim,
                                num_layers=FLAGS.num_layers,
-                               epochs=FLAGS.num_epochs,
-                               evaluate_every=FLAGS.evaluate_every,
-                               checkpoint_every=FLAGS.checkpoint_every,
-                               memory_usage_percentage=FLAGS.memory_usage_percentage
                                )
 
 val_batch_gen = data_utils.rand_batch_gen(validX, validY, batch_size)
 train_batch_gen = data_utils.rand_batch_gen(trainX, trainY, batch_size)
 
+# create session for training
+gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=FLAGS.memory_usage_percentage/100)
+session_conf = tf.ConfigProto(allow_soft_placement=True,
+                              gpu_options=gpu_options)
+sess = tf.Session(config=session_conf)
+# init all variables
+
 
 # In[9]:
 # sess = model.restore_last_session()
-sess = model.train(train_batch_gen, val_batch_gen)
+sess = train_seq2seq(model, train_batch_gen,
+                    val_batch_gen,
+                    sess,
+                    FLAGS.num_epochs,
+                    FLAGS.checkpoint_every,
+                    FLAGS.evaluate_every,
+                    ckpt_path=out_dir
+                    )
+sess.close()
