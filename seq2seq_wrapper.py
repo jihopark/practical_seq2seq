@@ -154,7 +154,6 @@ class Seq2Seq(object):
             try:
                 self.train_batch(sess, train_set)
                 if i and i % self.checkpoint_every == 0:
-                    # TODO: change checkpoint every run
                     # save model to disk
                     saver.save(sess, self.ckpt_path + self.model_name + '.ckpt', global_step=i)
                     print('\nModel saved to disk at iteration #{}'.format(i))

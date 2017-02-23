@@ -1,6 +1,7 @@
 
 import tensorflow as tf
 import numpy as np
+import time
 
 # preprocessed data
 from datasets.twitter import data
@@ -56,11 +57,15 @@ print("Training with:")
 print("training set size=%s" % trainX.shape[0])
 print("validiation set size=%s" % validX.shape[0])
 
+timestamp = str(int(time.time()))
+out_dir = 'ckpt/twitter/%s' % timestamp
+print("Checkpoint saved at %s" % out_dir)
+
 model = seq2seq_wrapper.Seq2Seq(xseq_len=xseq_len,
                                yseq_len=yseq_len,
                                xvocab_size=xvocab_size,
                                yvocab_size=yvocab_size,
-                               ckpt_path='ckpt/twitter/',
+                               ckpt_path=out_dir,
                                emb_dim=emb_dim,
                                num_layers=FLAGS.num_layers,
                                epochs=FLAGS.num_epochs,
