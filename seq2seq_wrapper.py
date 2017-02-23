@@ -56,7 +56,6 @@ class Seq2Seq(object):
 
             # for parameter sharing between training model
             #  and testing model
-            # TODO: reverse the enc_ip
             with tf.variable_scope('decoder') as scope:
                 # build the seq2seq model
                 #  inputs : encoder, decoder inputs, LSTM cell type, vocabulary sizes, embedding dimensions
@@ -95,7 +94,10 @@ class Seq2Seq(object):
 
     # get the feed dictionary
     def get_feed(self, X, Y, keep_prob):
-        feed_dict = {self.enc_ip[t]: X[t] for t in range(self.xseq_len)}
+
+        # reverse encoder input
+        feed_dict = {self.enc_ip[t]: X[self.xseq_len - t - 1] for t in range(self.xseq_len)}
+
         feed_dict.update({self.labels[t]: Y[t] for t in range(self.yseq_len)})
         feed_dict[self.keep_prob] = keep_prob # dropout prob
         return feed_dict
