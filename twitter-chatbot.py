@@ -7,6 +7,9 @@ import time
 from datasets.twitter import data
 import data_utils
 
+#model
+import seq2seq_wrapper
+
 #training & prediction
 from train import train_seq2seq
 
@@ -48,7 +51,6 @@ xvocab_size = len(metadata['idx2w'])
 yvocab_size = xvocab_size
 emb_dim = FLAGS.emb_dim
 
-import seq2seq_wrapper
 
 print("Initialzing model with:")
 print("xseq_len=%s, yseq_len=%s" % (xseq_len, yseq_len))
@@ -90,6 +92,7 @@ sess = train_seq2seq(model, train_batch_gen,
                     FLAGS.num_epochs,
                     FLAGS.checkpoint_every,
                     FLAGS.evaluate_every,
-                    ckpt_path=out_dir
+                    ckpt_path=out_dir,
+                    id2word_dic=metadata["idx2w"]
                     )
 sess.close()

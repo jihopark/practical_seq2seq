@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import sys
+import data_utils
 
 # run one batch for training
 def train_batch(model, sess, train_batch_gen):
@@ -34,14 +35,27 @@ def eval_step(model, sess, eval_batch_gen):
 # evaluate 'num_batches' batches
 def eval_batches(model, sess, eval_batch_gen, num_batches):
     losses = []
+    outputs = []
     for i in range(num_batches):
         loss_v, dec_op_v, batchX, batchY = eval_step(model, sess, eval_batch_gen)
         losses.append(loss_v)
-        # TODO: show some samples from evaluation
-    return np.mean(losses)
+        dec_op_v = np.array(dec_op_v).transpose([1,0,2])
+        best_prediction = np.argmax(dec_op_v, axis=2)
+
+        # sample from random index
+        k = np.random.choice(batchX.shape[1], 1)[0]
+        outputs.append([batchX[:,k], batchY[:,k], best_prediction[:,k]])
+    return np.mean(losses), outputs
 
 
-def train_seq2seq(model, train_set, valid_set, sess, epochs, checkpoint_every, evaluate_every, ckpt_path):
+def train_seq2seq(model,
+                  train_set,
+                  valid_set,
+                  sess, epochs,
+                  checkpoint_every,
+                  evaluate_every,
+                  ckpt_path,
+                  id2word_dic):
     if not sess:
         return None
 
@@ -62,7 +76,19 @@ def train_seq2seq(model, train_set, valid_set, sess, epochs, checkpoint_every, e
 
             if i and i % evaluate_every == 0:
                 # evaluate to get validation loss
-                val_loss = eval_batches(model, sess, valid_set, 16)
+                val_loss, val_outputs = eval_batches(model, sess, valid_set, 16)
+                # print validation outputs
+                print("Validation Output Samples")
+                for row in val_outputs:
+                    input, label, output = map(lambda x:
+                                               data_utils.decode(sequence=x,
+                                                                 lookup=id2word_dic,
+                                                                 separator=' '),
+                                               row)
+                    print("q: %s" % input)
+                    print("label: %s" % label)
+                    print("output: %s" % output)
+                    print("---------")
                 # print stats
                 print('val loss: {0:.6f}  perplexity: {0:.2f}'.format(val_loss, 2**val_loss ))
                 sys.stdout.flush()
