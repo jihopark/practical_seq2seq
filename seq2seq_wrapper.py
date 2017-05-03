@@ -70,9 +70,12 @@ class Seq2Seq(object):
             self.loss = tf.contrib.legacy_seq2seq.sequence_loss(self.decode_outputs,
                                                                 self.labels, loss_weights, yvocab_size,
                                                                 name="loss")
+            tf.summary.scalar("loss", self.loss)
             # train op to minimize the loss
             # TODO: learning rate change?
             self.train_op = tf.train.AdamOptimizer(learning_rate=lr).minimize(self.loss, name="train_op")
+
+            self.merge_summary = tf.summary.merge_all()
 
         sys.stdout.write('<log> Building Graph ')
         # build comput graph
