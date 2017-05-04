@@ -9,6 +9,8 @@ ignore/
 *.tar.gz
 *.question
 *.answer
-*.processor
+*.vocab
 *.pyc
 *.out
+logs/*
+datasets/*/raw_data
