@@ -23,9 +23,10 @@ tf.flags.DEFINE_boolean("use_lstm", True, "Wheter to use LSTM or GRU")
 
 # Training parameters
 tf.flags.DEFINE_integer("batch_size", 128, "Batch Size (default: 128)")
-tf.flags.DEFINE_integer("num_epochs", 10, "Number of training epochs (default:10)")
+tf.flags.DEFINE_integer("num_epochs", 15, "Number of training epochs (default:10)")
 tf.flags.DEFINE_integer("evaluate_every", 1000, "Evaluate model on dev set after this many epochs")
 tf.flags.DEFINE_integer("checkpoint_every", 5000, "Save model after this many steps")
+tf.flags.DEFINE_integer("beam_length", 2, "Length of Beam when decoding")
 tf.flags.DEFINE_float("learning_rate", 0.5,
                       "Learning Rate of the model(default:0.5")
 tf.flags.DEFINE_string("dataset_name", "large", "dataset name")
@@ -82,7 +83,7 @@ model = seq2seq_wrapper.Seq2Seq(xseq_len=xseq_len,
                                use_lstm=FLAGS.use_lstm
                                )
 
-eval_batch_gen = data_utils.rand_batch_gen(test_a, test_a, batch_size)
+eval_batch_gen = data_utils.rand_batch_gen(test_q, test_a, batch_size)
 train_batch_gen = data_utils.rand_batch_gen(train_q, train_a, batch_size)
 
 # create session for training
@@ -102,6 +103,7 @@ sess = train_seq2seq(model, train_batch_gen,
                      FLAGS.checkpoint_every,
                      FLAGS.evaluate_every,
                      logdir=logdir,
-                     vocab=vocab
+                     vocab=vocab,
+                     beam_length=FLAGS.beam_length
                      )
 #sess.close()

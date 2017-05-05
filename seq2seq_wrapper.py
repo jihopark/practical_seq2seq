@@ -34,6 +34,11 @@ class Seq2Seq(object):
             #  decoder inputs : 'GO' + [ y1, y2, ... y_t-1 ]
             self.dec_ip = [tf.zeros_like(self.enc_ip[0], dtype=tf.int64, name='GO')] + self.labels[:-1]
 
+            # decoder input for beam search
+            self.dec_ip_beam = [tf.placeholder(shape=[None,],
+                                          dtype=tf.int64,
+                                           name='dec_ip_beam{}'.format(t)) for t in range(yseq_len) ]
+
         # Basic LSTM cell wrapped in Dropout Wrapper
         self.keep_prob = tf.placeholder(tf.float32)
         # define the basic cell
@@ -64,8 +69,7 @@ class Seq2Seq(object):
             # testing model, where output of previous timestep is fed as input
             #  to the next timestep
             self.decode_outputs_test, self.decode_states_test = tf.contrib.legacy_seq2seq.embedding_rnn_seq2seq(
-                self.enc_ip, self.dec_ip, stacked_lstm, xvocab_size, yvocab_size,emb_dim,
-                feed_previous=True)
+                    self.enc_ip, self.dec_ip_beam, stacked_lstm, xvocab_size, yvocab_size,emb_dim)
 
         # now, for training,
         #  build loss function

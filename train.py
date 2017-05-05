@@ -2,7 +2,9 @@ import tensorflow as tf
 import numpy as np
 import sys
 import time
+
 import data_utils
+from predict import beam_search
 
 # run one batch for training
 def train_batch(model, sess, train_batch_gen):
@@ -29,27 +31,28 @@ def eval_step(model, sess, eval_batch_gen):
     batchX, batchY = eval_batch_gen.__next__()
     # build feed
     feed_dict = get_feed(model, batchX, batchY, keep_prob=1.)
-    summary, loss_v, dec_op_v = sess.run([model.merge_summary,
-                                 model.loss,
-                                 model.decode_outputs_test], feed_dict)
+    summary, loss_v = sess.run([model.merge_summary,
+                                 model.loss], feed_dict)
     # dec_op_v is a list; also need to transpose 0,1 indices
     #  (interchange batch_size and timesteps dimensions
-    dec_op_v = np.array(dec_op_v).transpose([1,0,2])
-    return summary, loss_v, dec_op_v, batchX, batchY
+    #dec_op_v = np.array(dec_op_v).transpose([1,0,2])
+    return summary, loss_v, batchX, batchY
 
 # evaluate 'num_batches' batches
-def eval_batches(model, sess, eval_batch_gen, num_batches):
+def eval_batches(model, sess, eval_batch_gen, num_batches, vocab, beam_length):
     losses = []
     outputs = []
     for i in range(num_batches):
-        summary, loss_v, dec_op_v, batchX, batchY = eval_step(model, sess, eval_batch_gen)
+        summary, loss_v, batchX, batchY = eval_step(model, sess, eval_batch_gen)
         losses.append(loss_v)
-        dec_op_v = np.array(dec_op_v).transpose([1,0,2])
-        best_prediction = np.argmax(dec_op_v, axis=2)
 
         # sample from random index
         k = np.random.choice(batchX.shape[1], 1)[0]
-        outputs.append([batchX[:,k], batchY[:,k], best_prediction[:,k]])
+
+        beam_output = beam_search(model, sess, batchX[:, k], batchY[:, k],
+                                  vocab, B=beam_length, verbose=False)
+        outputs.append([batchX[:,k], batchY[:,k], beam_output])
+
     return summary, np.mean(losses), outputs
 
 def vocab_reverse(vocab, ids):
@@ -63,7 +66,7 @@ def train_seq2seq(model,
                   checkpoint_every,
                   evaluate_every,
                   logdir,
-                  vocab):
+                  vocab, beam_length=2):
     if not sess:
         return None
 
@@ -94,16 +97,19 @@ def train_seq2seq(model,
 
             if i and i % evaluate_every == 0:
                 # evaluate to get validation loss
-                summary, eval_loss, eval_outputs = eval_batches(model, sess, eval_set, 16)
+                summary, eval_loss, eval_outputs = eval_batches(model, sess,
+                        eval_set, 16, vocab, beam_length)
                 eval_writer.add_summary(summary, i)
                 # print validation outputs
                 print("Validation Output Samples")
                 for row in eval_outputs:
                     print(row[0].shape)
-                    _input, _label, _output = [vocab_reverse(vocab, x) for x in row]
+                    _input = vocab_reverse(vocab, row[0])
+                    _label = vocab_reverse(vocab, row[1])
                     print("q: %s" % _input)
                     print("label: %s" % _label)
-                    print("output: %s" % _output)
+                    for n,h in enumerate(row[2]):
+                        print("output %s=%s %.10f" % (n, vocab_reverse(vocab, h[0]), h[1]))
                     print("---------")
                 # print stats
                 print('eval loss: {0:.6f}  perplexity: \
