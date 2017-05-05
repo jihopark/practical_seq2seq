@@ -92,7 +92,7 @@ def train_seq2seq(model,
                 print("Step %s: Training loss=%.4f (%s secs)" % (i, train_loss, step_time))
             if i and i % checkpoint_every == 0:
                 # save model to disk
-                saver.save(sess, logdir + "/" +  model.model_name + '.ckpt', global_step=i)
+                saver.save(sess, "%s/%s.ckpt" % (logdir, i), global_step=i)
                 print('\nModel saved to disk at iteration #{}'.format(i))
 
             if i and i % evaluate_every == 0:
@@ -119,6 +119,10 @@ def train_seq2seq(model,
         except KeyboardInterrupt: # this will most definitely happen, so handle it
             print('Interrupted by user at iteration {}'.format(i))
             break
+    saver.save(sess, logdir + "/final.ckpt", global_step=i)
+    print("\nFinal Model saved")
+
+
     train_writer.close()
     eval_writer.close()
     return sess
