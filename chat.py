@@ -29,7 +29,7 @@ FLAGS._parse_flags()
 
 tf.logging.set_verbosity(tf.logging.ERROR)
 
-logdir = "./logs/" + FLAGS.logdir
+logdir = "./" + FLAGS.logdir
 
 print("loading model from " + logdir)
 
