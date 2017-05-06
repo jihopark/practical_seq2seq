@@ -1,9 +1,23 @@
 import tensorflow as tf
 import numpy as np
 import sys
-
+import pickle
 
 class Seq2Seq(object):
+    def save_model_metadata(self, logdir):
+        metadata = {"xseq_len": self.xseq_len,
+                    "yseq_len": self.yseq_len,
+                    "model_name": self.model_name,
+                    "emb_dim": self.emb_dim,
+                    "use_lstm": self.use_lstm,
+                    "num_layers": self.num_layers,
+                    "xvocab_size":self.xvocab_size,
+                    "yvocab_size":self.yvocab_size}
+        print("saving model metadata to file")
+        print(metadata)
+
+        with open(logdir + "/model.meta", 'wb') as f:
+            pickle.dump(metadata, f)
 
     def __init__(self, xseq_len, yseq_len,
             xvocab_size, yvocab_size,
@@ -16,6 +30,11 @@ class Seq2Seq(object):
         self.xseq_len = xseq_len
         self.yseq_len = yseq_len
         self.model_name = model_name
+        self.emb_dim = emb_dim
+        self.use_lstm = use_lstm
+        self.num_layers = num_layers
+        self.xvocab_size = xvocab_size
+        self.yvocab_size = yvocab_size
 
         # placeholders
         tf.reset_default_graph()
@@ -28,7 +47,7 @@ class Seq2Seq(object):
 
             #  labels that represent the real outputs
             self.labels = [tf.placeholder(shape=[None,],
-                                          dtype=tf.int64,
+                                         dtype=tf.int64,
                                            name='labels_{}'.format(t)) for t in range(yseq_len) ]
 
             #  decoder inputs : 'GO' + [ y1, y2, ... y_t-1 ]

@@ -76,7 +76,7 @@ def train_seq2seq(model,
     sess.run(tf.global_variables_initializer())
     train_writer = tf.summary.FileWriter(logdir + '/train', sess.graph)
     eval_writer = tf.summary.FileWriter(logdir + '/eval')
-
+    model.save_model_metadata(logdir)
 
     print('\nTraining started\n')
     print("Total steps=%s" % num_steps)
@@ -121,7 +121,7 @@ def train_seq2seq(model,
             break
     saver.save(sess, logdir + "/final.ckpt", global_step=i)
     print("\nFinal Model saved")
-
+    saver.export_meta_graph(logdir + '/final.meta')
 
     train_writer.close()
     eval_writer.close()

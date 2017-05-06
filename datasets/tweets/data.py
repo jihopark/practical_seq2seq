@@ -209,16 +209,24 @@ def create_vocab_and_transform(name, vocab_size):
 def load(name):
     file_path = os.path.dirname(os.path.abspath(__file__))
     print("file path=" + file_path)
-    with open(file_path + "/%s.vocab" % name, "rb") as f:
-        vocab = pickle.load(f)
     try:
         return (np.load(file_path + "/train_q_%s.npy" % name),
                 np.load(file_path + "/train_a_%s.npy" % name),
                 np.load(file_path + "/test_q_%s.npy" % name),
                 np.load(file_path + "/test_a_%s.npy" % name),
-                vocab)
+                load_vocab(name))
     except:
         raise FileNotFoundError("No preprocessing done. Run data.py")
+
+def load_vocab(name):
+    file_path = os.path.dirname(os.path.abspath(__file__))
+    try:
+        with open(file_path + "/%s.vocab" % name, "rb") as f:
+            vocab = pickle.load(f)
+        return vocab
+    except:
+        raise FileNotFoundError("No preprocessing done. Run data.py")
+
 
 if __name__ == "__main__":
     parser =argparse.ArgumentParser()

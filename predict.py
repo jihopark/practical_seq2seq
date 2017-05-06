@@ -35,6 +35,12 @@ def beam_search(model, sess, question, label, vocab, B=2, verbose=False):
         for n, h in enumerate(beam):
             print("%s:%s %.5f" %(n, to_string_sequence(h[0]), h[1]))
 
+    def decode_beam(beam):
+        decoded = []
+        for seq, prob in beam:
+            decoded.append((to_string_sequence(seq), prob))
+        return decoded
+
     def get_feed_decoder(pad_symbol, decoder_input=None):
         y_input = [0]
         if decoder_input:
@@ -100,7 +106,7 @@ def beam_search(model, sess, question, label, vocab, B=2, verbose=False):
                         new_beam.append((new_sequence,new_prob))
             beam = new_beam
             beam = keep_beam_length(beam)
-            if verbose: 
+            if verbose:
                 print("the new beam")
                 print_beam(beam)
 
@@ -109,4 +115,4 @@ def beam_search(model, sess, question, label, vocab, B=2, verbose=False):
         print("final=")
         print_beam(complete)
 
-    return complete
+    return decode_beam(complete)
