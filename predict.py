@@ -18,7 +18,8 @@ def softmax(x):
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum()
 
-def beam_search(model, sess, question, label, vocab, B=2, verbose=False):
+def beam_search(model, sess, question, label, vocab, use_random=True, B=2,
+                decode_output=False, verbose=False):
     y_len = len(label)
 
     def get_top_b(logits):
@@ -115,4 +116,4 @@ def beam_search(model, sess, question, label, vocab, B=2, verbose=False):
         print("final=")
         print_beam(complete)
 
-    return decode_beam(complete)
+    return decode_beam(complete) if decode_output else complete

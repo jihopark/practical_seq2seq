@@ -101,7 +101,8 @@ def encode_input(question):
 def answer(question, beam_length=2, use_random=True):
     encoded = encode_input(question)
     return beam_search(model, sess, encoded, np.ones_like(encoded),
-                              vocab, B=beam_length, verbose=False)
+                              vocab, use_random, B=beam_length,
+                              decode_output=True, verbose=False)
 
 print(answer("who are you?"))
 
