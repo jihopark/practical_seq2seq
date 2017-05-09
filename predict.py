@@ -15,24 +15,39 @@ def predict(model, sess, X):
 
 def softmax(x):
     """Compute softmax values for each sets of scores in x."""
-    e_x = np.exp(x - np.max(x))
-    return e_x / e_x.sum()
+    #e_x = np.exp(x - np.max(x))
+    #return e_x / e_x.sum()
+    return np.exp(x) / np.sum(np.exp(x), axis=0)
 
 def beam_search(model, sess, question, label, vocab, use_random=True, B=2,
                 decode_output=False, verbose=False):
     y_len = len(label)
 
-    def get_top_b(logits):
+    def get_next_tokens(logits):
         probs = softmax(logits)
-        best_b_ids = np.argpartition(probs, -B)[-B:]
-        best_b_probs = [probs[id] for id in best_b_ids]
-        return best_b_ids, best_b_probs
+        ids = []
+        if use_random:
+            try:
+                while len(ids) != B: # repeat toss until we get B result
+                    ids = []
+                    random_toss = np.random.multinomial(B, probs)
+                    for id, value in enumerate(random_toss):
+                        if value > 0:
+                            ids.append(id)
+            except ValueError:
+                #TODO: find why we get the softmax miscalculation.
+                # it doesn't add up to one
+                # for now it just chooses the most probable
+                ids = np.argpartition(probs, -B)[-B:]
+        else:
+            ids = np.argpartition(probs, -B)[-B:]
+        best_b_probs = [probs[id] for id in ids]
+        return ids, best_b_probs
 
     def to_string_sequence(ids):
         return " ".join([vocab["id2word"][id] for id in ids])
 
     def print_beam(beam):
-        print("printing beam with size %s" % len(beam))
         for n, h in enumerate(beam):
             print("%s:%s %.5f" %(n, to_string_sequence(h[0]), h[1]))
 
@@ -75,7 +90,7 @@ def beam_search(model, sess, question, label, vocab, use_random=True, B=2,
             dec_op_v = np.array(dec_op_v)
 
             # add the first partial hypothesis
-            ids, probs = get_top_b(dec_op_v[0,0,:])
+            ids, probs = get_next_tokens(dec_op_v[0,0,:])
             for j in range(B):
                 beam.append(([ids[j]], probs[j]))
         else:
@@ -91,7 +106,7 @@ def beam_search(model, sess, question, label, vocab, use_random=True, B=2,
                                     get_feed_dict(hypothesis[0]))
                 dec_op_v = np.array(dec_op_v)
 
-                ids, probs = get_top_b(dec_op_v[i,0,:])
+                ids, probs = get_next_tokens(dec_op_v[i,0,:])
 
                 for j in range(B):
                     new_sequence = list(hypothesis[0])
