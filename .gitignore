@@ -14,3 +14,4 @@ ignore/
 *.out
 logs/*
 datasets/*/raw_data
+pretrained_model/*

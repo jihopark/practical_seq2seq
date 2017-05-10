@@ -19,7 +19,7 @@ Look at `twitter-chatbot.py`. The checkpoints and summary will be saved in `logs
 Look at `predict.py`. Now uses random beam search.
 
 ## Chatting
-A 2-layer-LSTM  model trained on twitter corpus is saved in `/pretrained_model/two`.
+Pretrained model can be used to chat.
 See `chat.py`. We incorporated this module with Flask in another project. (Flask code is not here)
 
 ### Examples
