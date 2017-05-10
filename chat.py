@@ -8,12 +8,12 @@ import pickle
 from datasets.tweets import data
 import data_utils
 
-#model
+# model
 import seq2seq_wrapper
 
 #training & prediction
 from train import train_seq2seq
-from predict import beam_search 
+from predict import beam_search
 
 
 # Parameters
@@ -21,7 +21,7 @@ from predict import beam_search
 
 # Misc Parameters
 tf.flags.DEFINE_integer("memory_usage_percentage", 95, "Set Memory usage percentage (default:95)")
-tf.flags.DEFINE_string("logdir", "", "log directory")
+tf.flags.DEFINE_string("logdir", "pretrained_models/two", "log directory")
 tf.flags.DEFINE_string("dataset_name", "large", "dataset_name")
 
 FLAGS = tf.flags.FLAGS
@@ -52,13 +52,13 @@ print("emb_dim=%s" % emb_dim)
 print("num_layers=%s" % num_layers)
 
 model = seq2seq_wrapper.Seq2Seq(xseq_len=xseq_len,
-                               yseq_len=yseq_len,
-                               xvocab_size=xvocab_size,
-                               yvocab_size=yvocab_size,
-                               emb_dim=emb_dim,
-                               num_layers=num_layers,
-                               use_lstm=use_lstm
-                               )
+                                yseq_len=yseq_len,
+                                xvocab_size=xvocab_size,
+                                yvocab_size=yvocab_size,
+                                emb_dim=emb_dim,
+                                num_layers=num_layers,
+                                use_lstm=use_lstm
+                                )
 
 vocab = data.load_vocab(FLAGS.dataset_name)
 
@@ -72,15 +72,17 @@ checkpoint_file = tf.train.get_checkpoint_state(saver_path)
 ckpt_path = checkpoint_file.model_checkpoint_path
 
 print("restoring tensorflow ckpt from %s" %
-        checkpoint_file.model_checkpoint_path)
+      checkpoint_file.model_checkpoint_path)
 
 # create session for training
-gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=FLAGS.memory_usage_percentage/100)
+gpu_options = tf.GPUOptions(
+    per_process_gpu_memory_fraction=FLAGS.memory_usage_percentage / 100)
 session_conf = tf.ConfigProto(allow_soft_placement=True,
                               gpu_options=gpu_options)
 sess = tf.Session(config=session_conf)
 saver = tf.train.Saver()
 saver.restore(sess, checkpoint_file.model_checkpoint_path)
+
 
 def encode_input(question):
     _question = []
@@ -98,13 +100,16 @@ def encode_input(question):
 
     return _question
 
+
 def answer(question, beam_length=2, use_random=True):
     encoded = encode_input(question)
-    return beam_search(model, sess, encoded, np.ones_like(encoded),
-                              vocab, use_random, B=beam_length,
-                              decode_output=True, verbose=False)
+    output1 = beam_search(model, sess, encoded, np.ones_like(encoded),
+                       vocab, use_random, B=beam_length, decode_output=True, verbose=False)
+    return output1
+
 
 print(answer("who are you?"))
+
 
 def close_session():
     sess.close()

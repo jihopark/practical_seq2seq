@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import random
 
 # prediction
 # TODO: rescoring
@@ -23,16 +24,16 @@ def beam_search(model, sess, question, label, vocab, use_random=True, B=2,
                 decode_output=False, verbose=False):
     y_len = len(label)
 
-    def get_next_tokens(logits):
+    def get_next_tokens(logits, is_first=False):
         probs = softmax(logits)
         ids = []
-        if use_random:
+        if use_random and not is_first:
             try:
                 while len(ids) != B: # repeat toss until we get B result
                     ids = []
                     random_toss = np.random.multinomial(B, probs)
                     for id, value in enumerate(random_toss):
-                        if value > 0:
+                        if value > 0 and id != vocab["word2id"]["UNK"]:
                             ids.append(id)
             except ValueError:
                 #TODO: find why we get the softmax miscalculation.
@@ -76,7 +77,9 @@ def beam_search(model, sess, question, label, vocab, use_random=True, B=2,
 
         return feed_dict
 
-    def keep_beam_length(_beam):
+    def keep_beam_length(_beam, use_random=False):
+        if use_random:
+            return random.sample(_beam, B)
         if len(_beam) > B:
             _beam = sorted(_beam, key=lambda x: x[1], reverse=True)
             _beam = _beam[:B]
@@ -106,7 +109,7 @@ def beam_search(model, sess, question, label, vocab, use_random=True, B=2,
                                     get_feed_dict(hypothesis[0]))
                 dec_op_v = np.array(dec_op_v)
 
-                ids, probs = get_next_tokens(dec_op_v[i,0,:])
+                ids, probs = get_next_tokens(dec_op_v[i,0,:], is_first=True)
 
                 for j in range(B):
                     new_sequence = list(hypothesis[0])
@@ -126,7 +129,7 @@ def beam_search(model, sess, question, label, vocab, use_random=True, B=2,
                 print("the new beam")
                 print_beam(beam)
 
-    complete = keep_beam_length(complete)
+    complete = keep_beam_length(complete, use_random)
     if verbose:
         print("final=")
         print_beam(complete)
